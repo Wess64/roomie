@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>•-</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            touch-action: none;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        #controls {
+            position: absolute;
+            bottom: 50px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            user-select: none;
+            justify-self: center;
+        }
+        #dash-btn {
+            grid-column: 4;
+            grid-row: 1 / span 2;
+            width: 80px;
+            height: 130px;
+            background-color: rgba(13, 12, 17, 0.5);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 16px;
+            user-select: none;
+            justify-self: center;
+        }
+        #debug {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+            font-family: monospace;
+        }
+        #minimap {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 2px solid #555;
+            cursor: pointer;
+        }
+        #editor-panel {
+            position: absolute;
+            top: 50%;
+            left: 10px;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border: 2px solid #555;
+            display: none;
+            color: white;
+            max-height: 80vh;
+            overflow-y: scroll;
+            z-index: 2001;
+        }
+        #editor-grid {
+            display: grid;
+            gap: 0px;
+            margin-bottom: 10px;
+        }
+        .editor-cell {
+            width: 12px;
+            height: 12px;
+            background-color: #333;
+            cursor: pointer;
+        }
+        .editor-cell.wall {
+            background-color: #C0C0C0;
+        }
+        #editor-toggle {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 1px solid #555;
+            padding: 5px 10px;
+            cursor: pointer;
+            z-index: 100;
+        }
+        .guide {
+            position: absolute;
+            top: 125px;
+            right: 10px;
+            padding: 10px;
+        }
+        .editor-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            bottom: 10px;
+            margin-top: 10px;
+        }
+        .editor-btn {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 5px;
+            cursor: pointer;
+        }
+        .size-controls {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .size-controls input {
+            width: 50px;
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+        }
+        .save-load-controls {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        #save-name {
+            flex-grow: 1;
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 5px;
+        }
+        #minimap-settings {
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            right: calc(25% + 20px);
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border: 2px solid #555;
+            color: white;
+            display: none;
+            z-index: 100;
+            width: 250px;
+        }
+        .minimap-color-picker {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .minimap-color-picker label {
+            width: 80px;
+            display: inline-block;
+        }
+        .minimap-color-picker input {
+            width: 60px;
+            height: 25px;
+            border: none;
+            background: transparent;
+        }
+        #minimap-toggle-settings {
+            position: absolute;
+            bottom: 10px;
+            right: calc(25% + 20px);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 1px solid #555;
+            padding: 5px 10px;
+            cursor: pointer;
+            z-index: 100;
+        }
+        .minimap-presets {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .minimap-preset {
+            padding: 3px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        #show-rays-toggle {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+        }
+        #show-rays-toggle input {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="canvas"></canvas>
+        <canvas id="minimap"></canvas>
+        <div class="guide" style="background-color: black; color: white; border-radius: 5px;">
+                <details>
+                    <summary>controls</summary>
+                    <hr>
+                    q - strafe left<br>
+                    e - strafe right<br>
+                    a - rotate left<br>
+                    d - rotate right<br>
+                    w - go foward<hr>
+                    shift - dash<hr>
+                    t - edit map<hr>
+                </details>
+                </div>
+        <button id="minimap-toggle-settings">minimap settings</button>
+        <div id="minimap-settings">
+            <h4>minimap settings</h4>
+            <div class="minimap-color-picker">
+                <label for="floor-color">░ floor:</label>
+                <input type="color" id="floor-color" value="#333333">
+            </div>
+            <div class="minimap-color-picker">
+                <label for="wall-color">▓ walls:</label>
+                <input type="color" id="wall-color" value="#AAAAAA">
+            </div>
+            <div class="minimap-color-picker">
+                <label for="player-color">• player:</label>
+                <input type="color" id="player-color" value="#FF0000">
+            </div>
+            <div class="minimap-color-picker">
+                <label for="direction-color">--- direction line:</label>
+                <input type="color" id="direction-color" value="#FFFF00">
+            </div>
+            <div class="minimap-color-picker">
+                <label for="ray-color">\|/ rays:</label>
+                <input type="color" id="ray-color" value="#FF0040">
+            </div>
+            <div id="show-rays-toggle">
+                <input type="checkbox" id="show-rays" checked>
+                <label for="show-rays">enable the rays</label>
+            </div>
+            <div class="minimap-presets">
+                <div class="minimap-preset" style="background: #333; color: white;" onclick="applyPreset('default')">default</div>
+                <div class="minimap-preset" style="background: #000; color: #FFF;" onclick="applyPreset('dark')">dark</div>
+                <div class="minimap-preset" style="background: #200020; color: #ff0000;" onclick="applyPreset('high-contrast')">high contrast</div>
+                <div class="minimap-preset" style="background: #1D1C22; color: #fff;" onclick="applyPreset('wess')">wess style</div>
+            </div>
+            <div style="display: flex; gap: 5px; margin-top: 10px;">
+                <button id="save-minimap-colors" class="editor-btn">⇱ save</button>
+                <button id="reset-minimap-colors" class="editor-btn">↺</button>
+            </div>
+        </div>
+
+        <button id="editor-toggle">edit [ｔ]</button>
+        <div id="editor-panel">
+            <h3>level maker :3</h3>
+            <div class="size-controls">
+                <span>size:</span>
+                <input type="number" id="map-width" min="5" max="50" value="20">
+                <span>x</span>
+                <input type="number" id="map-height" min="5" max="50" value="20">
+                <button id="resize-btn" class="editor-btn">↺</button>
+            </div>
+            <div id="editor-grid"></div>
+            <div class="editor-controls">
+                <button id="clear-btn" class="editor-btn">🗑</button>
+                <button id="border-btn" class="editor-btn">make border</button>
+            </div>
+            <div class="save-load-controls">
+                <input type="text" id="save-name" placeholder="Level name">
+                <button id="save-btn" class="editor-btn">⇱ save</button>
+                <button id="load-btn" class="editor-btn">⇲ load</button>
+            </div>
+            <div id="saved-levels"></div>
+        </div>
+        <div id="debug"></div>
+        <div id="controls">
+            <br>
+            <div class="control-btn" id="forward">^</div>
+            <br>
+            <div class="control-btn" id="left"><📽</div>
+            <br>
+            <div class="control-btn" id="right">📽></div>
+            <div class="control-btn" id="strafe-left"><</div>
+            <div>
+                <br>
+            </div>
+            <div class="control-btn" id="strafe-right">></div>
+            <div id="dash-btn">DASH</div>
+        </div>
+    </div>
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const minimap = document.getElementById('minimap');
+        const minimapCtx = minimap.getContext('2d');
+        const editorPanel = document.getElementById('editor-panel');
+        const editorGrid = document.getElementById('editor-grid');
+        const editorToggle = document.getElementById('editor-toggle');
+        
+        // Editor controls
+        const mapWidthInput = document.getElementById('map-width');
+        const mapHeightInput = document.getElementById('map-height');
+        const resizeBtn = document.getElementById('resize-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const borderBtn = document.getElementById('border-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const loadBtn = document.getElementById('load-btn');
+        const saveNameInput = document.getElementById('save-name');
+        const savedLevelsDiv = document.getElementById('saved-levels');
+
+        // Set canvas to full window size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Set minimap size (1/4 of screen width, square aspect)
+            const minimapSize = Math.min(window.innerWidth, window.innerHeight) / 4;
+            minimap.width = minimapSize;
+            minimap.height = minimapSize;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Game constants
+        const FOV = Math.PI / 3; // 60 degrees
+        const HALF_FOV = FOV / 2;
+        const NUM_RAYS = canvas.width / 2;
+        const CELL_SIZE = 64;
+        const WALL_HEIGHT = CELL_SIZE * 5;
+        const PLAYER_HEIGHT = WALL_HEIGHT / 2;
+        const WALK_SPEED = 3;
+        const STRAFE_SPEED = 2.5;
+        const ROTATION_SPEED = 0.05;
+        const DASH_SPEED = 30;
+        const DASH_DURATION = 150; // ms
+        const DASH_COOLDOWN = 500; // ms
+        let MAP_SIZE = 20;
+
+        // Game state
+        const player = {
+            x: CELL_SIZE * 1.5,
+            y: CELL_SIZE * 1.5,
+            angle: Math.PI / 4, // Start facing diagonally
+            fov: FOV,
+            isDashing: false,
+            lastDashTime: 0
+        };
+
+        // Mouse look state
+        const mouse = {
+            x: 0,
+            y: 0,
+            isDragging: false,
+            lastX: 0,
+            sensitivity: 0.002
+        };
+
+        // Initialize empty map
+        let map = [];
+        function initMap(width = MAP_SIZE, height = MAP_SIZE) {
+            map = [];
+            MAP_SIZE = Math.max(width, height); // Use largest dimension for minimap
+            for (let y = 0; y < height; y++) {
+                map[y] = [];
+                for (let x = 0; x < width; x++) {
+                    // Default to empty space
+                    map[y][x] = 0;
+                }
+            }
+            // Update size inputs
+            mapWidthInput.value = width;
+            mapHeightInput.value = height;
+        }
+        initMap();
+
+        // Colors for different wall types
+        const wallColors = {
+            1: '#C0C0C0' // Gray walls
+        };
+
+        // Mini-map colors and settings
+        const minimapSettings = {
+            floor: '#333333',
+            wall: '#AAAAAA',
+            player: '#FF0000',
+            playerDir: '#FFFF00',
+            ray: '#FF00FF40',
+            showRays: true
+        };
+
+        // Minimap color customization
+        const minimapToggleSettings = document.getElementById('minimap-toggle-settings');
+        const minimapSettingsPanel = document.getElementById('minimap-settings');
+        const floorColorInput = document.getElementById('floor-color');
+        const wallColorInput = document.getElementById('wall-color');
+        const playerColorInput = document.getElementById('player-color');
+        const directionColorInput = document.getElementById('direction-color');
+        const rayColorInput = document.getElementById('ray-color');
+        const showRaysCheckbox = document.getElementById('show-rays');
+        const saveMinimapColorsBtn = document.getElementById('save-minimap-colors');
+        const resetMinimapColorsBtn = document.getElementById('reset-minimap-colors');
+
+        // Load saved settings or use defaults
+        function loadMinimapSettings() {
+            const savedSettings = JSON.parse(localStorage.getItem('minimapSettings'));
+            if (savedSettings) {
+                minimapSettings.floor = savedSettings.floor || '#333333';
+                minimapSettings.wall = savedSettings.wall || '#AAAAAA';
+                minimapSettings.player = savedSettings.player || '#FF0000';
+                minimapSettings.playerDir = savedSettings.playerDir || '#FFFF00';
+                minimapSettings.ray = savedSettings.ray || '#FF00FF40';
+                minimapSettings.showRays = savedSettings.showRays !== undefined ? savedSettings.showRays : true;
+                
+                // Update UI elements
+                floorColorInput.value = minimapSettings.floor;
+                wallColorInput.value = minimapSettings.wall;
+                playerColorInput.value = minimapSettings.player;
+                directionColorInput.value = minimapSettings.playerDir;
+                rayColorInput.value = minimapSettings.ray;
+                showRaysCheckbox.checked = minimapSettings.showRays;
+            }
+        }
+
+        // Save settings to localStorage
+        function saveMinimapSettings() {
+            minimapSettings.floor = floorColorInput.value;
+            minimapSettings.wall = wallColorInput.value;
+            minimapSettings.player = playerColorInput.value;
+            minimapSettings.playerDir = directionColorInput.value;
+            minimapSettings.ray = rayColorInput.value;
+            minimapSettings.showRays = showRaysCheckbox.checked;
+            
+            localStorage.setItem('minimapSettings', JSON.stringify(minimapSettings));
+        }
+
+        // Reset to default colors
+        function resetMinimapSettings() {
+            floorColorInput.value = '#333333';
+            wallColorInput.value = '#AAAAAA';
+            playerColorInput.value = '#FF0000';
+            directionColorInput.value = '#FFFF00';
+            rayColorInput.value = '#FF0040';
+            showRaysCheckbox.checked = true;
+            saveMinimapSettings();
+        }
+
+        // Apply color presets
+        function applyPreset(presetName) {
+            switch(presetName) {
+                case 'default':
+                    floorColorInput.value = '#333333';
+                    wallColorInput.value = '#AAAAAA';
+                    playerColorInput.value = '#FF0000';
+                    directionColorInput.value = '#FFFF00';
+                    rayColorInput.value = '#FF0040';
+                    break;
+                case 'dark':
+                    floorColorInput.value = '#111111';
+                    wallColorInput.value = '#333333';
+                    playerColorInput.value = '#00FF00';
+                    directionColorInput.value = '#00FFFF';
+                    rayColorInput.value = '#FF0040';
+                    break;
+                case 'high-contrast':
+                    floorColorInput.value = '#000000';
+                    wallColorInput.value = '#FFFFFF';
+                    playerColorInput.value = '#FF0000';
+                    directionColorInput.value = '#FFFF00';
+                    rayColorInput.value = '#FF0080';
+                    break;
+                case 'wess':
+                    floorColorInput.value = '#555555';
+                    wallColorInput.value = '#FFFFFF';
+                    playerColorInput.value = '#AAAAAA';
+                    directionColorInput.value = '#0D0C11';
+                    rayColorInput.value = '#800080';
+                    break;
+            }
+        }
+
+        // Toggle settings panel
+        minimapToggleSettings.addEventListener('click', () => {
+            minimapSettingsPanel.style.display = minimapSettingsPanel.style.display === 'block' ? 'none' : 'block';
+        });
+
+        saveMinimapColorsBtn.addEventListener('click', saveMinimapSettings);
+        resetMinimapColorsBtn.addEventListener('click', resetMinimapSettings);
+        showRaysCheckbox.addEventListener('change', () => {
+            minimapSettings.showRays = showRaysCheckbox.checked;
+            saveMinimapSettings();
+        });
+
+        // Load settings when game starts
+        loadMinimapSettings();
+
+        // Initialize editor grid
+        function initEditorGrid() {
+            editorGrid.innerHTML = '';
+            const width = map[0].length;
+            const height = map.length;
+            
+            editorGrid.style.gridTemplateColumns = `repeat(${width}, 1fr)`;
+            
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'editor-cell';
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    if (map[y] && map[y][x] === 1) cell.classList.add('wall');
+                    
+                    cell.addEventListener('click', () => {
+                        // Toggle wall
+                        if (map[y] && map[y][x] !== undefined) {
+                            map[y][x] = map[y][x] === 0 ? 1 : 0;
+                            cell.classList.toggle('wall');
+                        }
+                    });
+                    
+                    editorGrid.appendChild(cell);
+                }
+            }
+        }
+        initEditorGrid();
+
+        // Resize map
+        function resizeMap(newWidth, newHeight) {
+            const oldWidth = map[0]?.length || 0;
+            const oldHeight = map.length;
+            const newMap = [];
+            
+            for (let y = 0; y < newHeight; y++) {
+                newMap[y] = [];
+                for (let x = 0; x < newWidth; x++) {
+                    if (y < oldHeight && x < oldWidth) {
+                        newMap[y][x] = map[y][x]; // Copy existing cell
+                    } else {
+                        newMap[y][x] = 0; // Fill new cells with empty space
+                    }
+                }
+            }
+            
+            map = newMap;
+            initEditorGrid();
+            
+            // Ensure player is within bounds
+            player.x = Math.min(player.x, (newWidth - 1) * CELL_SIZE);
+            player.y = Math.min(player.y, (newHeight - 1) * CELL_SIZE);
+        }
+
+        // Add borders to map
+        function addBorders() {
+            const width = map[0].length;
+            const height = map.length;
+            
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    if (x === 0 || y === 0 || x === width - 1 || y === height - 1) {
+                        map[y][x] = 1;
+                    }
+                }
+            }
+            initEditorGrid();
+        }
+
+        // Save map to localStorage
+        function saveMap() {
+            const name = saveNameInput.value.trim() || `level_${Date.now()}`;
+            const levelData = {
+                name: name,
+                width: map[0].length,
+                height: map.length,
+                map: map,
+                player: {
+                    x: player.x,
+                    y: player.y,
+                    angle: player.angle
+                }
+            };
+            
+            localStorage.setItem(`doomish_level_${name}`, JSON.stringify(levelData));
+            updateSavedLevelsList();
+            saveNameInput.value = '';
+        }
+
+        // Load map from localStorage
+        function loadMap(name) {
+            const levelData = JSON.parse(localStorage.getItem(`doomish_level_${name}`));
+            if (levelData) {
+                map = levelData.map;
+                player.x = levelData.player.x;
+                player.y = levelData.player.y;
+                player.angle = levelData.player.angle;
+                
+                mapWidthInput.value = levelData.width;
+                mapHeightInput.value = levelData.height;
+                
+                initEditorGrid();
+            }
+        }
+
+        // Update saved levels list
+        function updateSavedLevelsList() {
+            savedLevelsDiv.innerHTML = '<h4>Saved Levels:</h4>';
+            const levels = [];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('doomish_level_')) {
+                    const levelData = JSON.parse(localStorage.getItem(key));
+                    levels.push(levelData);
+                }
+            }
+            
+            if (levels.length === 0) {
+                savedLevelsDiv.innerHTML += '<p>No saved levels</p>';
+                return;
+            }
+            
+            levels.sort((a, b) => a.name.localeCompare(b.name));
+            
+            const list = document.createElement('div');
+            levels.forEach(level => {
+                const item = document.createElement('div');
+                item.style.display = 'flex';
+                item.style.justifyContent = 'space-between';
+                item.style.margin = '5px 0';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = level.name;
+                nameSpan.style.cursor = 'pointer';
+                nameSpan.style.textDecoration = 'underline';
+                nameSpan.addEventListener('click', () => {
+                    saveNameInput.value = level.name;
+                });
+                
+                const loadBtn = document.createElement('button');
+                loadBtn.textContent = 'Load';
+                loadBtn.className = 'editor-btn';
+                loadBtn.style.padding = '2px 5px';
+                loadBtn.addEventListener('click', () => loadMap(level.name));
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '×';
+                deleteBtn.className = 'editor-btn';
+                deleteBtn.style.padding = '2px 5px';
+                deleteBtn.style.marginLeft = '5px';
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm(`you sure you wanna get rid of ${level.name}?? :\(\(`)) {
+                        localStorage.removeItem(`doomish_level_${level.name}`);
+                        updateSavedLevelsList();
+                    }
+                });
+                
+                item.appendChild(nameSpan);
+                item.appendChild(loadBtn);
+                item.appendChild(deleteBtn);
+                list.appendChild(item);
+            });
+            
+            savedLevelsDiv.appendChild(list);
+        }
+
+        // Toggle editor panel
+        editorToggle.addEventListener('click', () => {
+            editorPanel.style.display = editorPanel.style.display === 'block' ? 'none' : 'block';
+            if (editorPanel.style.display === 'block') {
+                updateSavedLevelsList();
+            }
+        });
+
+        // Editor control events
+        resizeBtn.addEventListener('click', () => {
+            const newWidth = parseInt(mapWidthInput.value) || 20;
+            const newHeight = parseInt(mapHeightInput.value) || 20;
+            resizeMap(newWidth, newHeight);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            if (confirm('delete the whole map? :\<')) {
+                initMap(map[0].length, map.length);
+                initEditorGrid();
+            }
+        });
+
+        borderBtn.addEventListener('click', () => {
+            addBorders();
+        });
+
+        saveBtn.addEventListener('click', saveMap);
+        loadBtn.addEventListener('click', () => {
+            const name = saveNameInput.value.trim();
+            if (name) loadMap(name);
+        });
+
+        // Raycasting function
+        function castRay(angle) {
+            // Normalize angle
+            angle = normalizeAngle(angle);
+            
+            const rayDirX = Math.cos(angle);
+            const rayDirY = Math.sin(angle);
+            
+            // Player's current cell
+            let mapX = Math.floor(player.x / CELL_SIZE);
+            let mapY = Math.floor(player.y / CELL_SIZE);
+            
+            // Length of ray from current position to next x or y-side
+            let sideDistX, sideDistY;
+            
+            // Length of ray from one x or y-side to next x or y-side
+            const deltaDistX = Math.abs(1 / rayDirX);
+            const deltaDistY = Math.abs(1 / rayDirY);
+            
+            // Direction to step in x or y direction (either +1 or -1)
+            let stepX, stepY;
+            
+            // Was a wall hit?
+            let hit = false;
+            // Was a NS or a EW wall hit?
+            let side;
+            
+            // Calculate step and initial sideDist
+            if (rayDirX < 0) {
+                stepX = -1;
+                sideDistX = (player.x / CELL_SIZE - mapX) * deltaDistX;
+            } else {
+                stepX = 1;
+                sideDistX = (mapX + 1.0 - player.x / CELL_SIZE) * deltaDistX;
+            }
+            
+            if (rayDirY < 0) {
+                stepY = -1;
+                sideDistY = (player.y / CELL_SIZE - mapY) * deltaDistY;
+            } else {
+                stepY = 1;
+                sideDistY = (mapY + 1.0 - player.y / CELL_SIZE) * deltaDistY;
+            }
+            
+            // Perform DDA (Digital Differential Analysis)
+            while (!hit) {
+                // Jump to next map square, either in x-direction, or in y-direction
+                if (sideDistX < sideDistY) {
+                    sideDistX += deltaDistX;
+                    mapX += stepX;
+                    side = 0;
+                } else {
+                    sideDistY += deltaDistY;
+                    mapY += stepY;
+                    side = 1;
+                }
+                
+                // Check if ray has hit a wall
+                if (mapX >= 0 && mapX < map[0].length && mapY >= 0 && mapY < map.length) {
+                    if (map[mapY][mapX] > 0) hit = true;
+                } else {
+                    // Ray went out of the map
+                    hit = true;
+                    mapX = Math.max(0, Math.min(mapX, map[0].length - 1));
+                    mapY = Math.max(0, Math.min(mapY, map.length - 1));
+                }
+            }
+            
+            // Calculate distance projected on camera direction
+            let perpWallDist;
+            if (side === 0) {
+                perpWallDist = (mapX - player.x / CELL_SIZE + (1 - stepX) / 2) / rayDirX;
+            } else {
+                perpWallDist = (mapY - player.y / CELL_SIZE + (1 - stepY) / 2) / rayDirY;
+            }
+            
+            // Calculate height of wall slice to draw on screen
+            const lineHeight = Math.floor(canvas.height / perpWallDist);
+            
+            // Calculate lowest and highest pixel to fill in current stripe
+            const drawStart = Math.max(0, -lineHeight / 2 + canvas.height / 2 - PLAYER_HEIGHT);
+            const drawEnd = Math.min(canvas.height - 1, lineHeight / 2 + canvas.height / 2 - PLAYER_HEIGHT);
+            
+            return {
+                distance: perpWallDist,
+                height: lineHeight,
+                start: drawStart,
+                end: drawEnd,
+                side: side,
+                mapX: mapX,
+                mapY: mapY,
+                rayDirX: rayDirX,
+                rayDirY: rayDirY
+            };
+        }
+
+        function normalizeAngle(angle) {
+            angle = angle % (2 * Math.PI);
+            if (angle < 0) angle += 2 * Math.PI;
+            return angle;
+        }
+
+        // Draw the minimap with raycasting lines
+        function drawMinimap() {
+            const mapWidth = map[0].length;
+            const mapHeight = map.length;
+            const cellSize = minimap.width / MAP_SIZE;
+            
+            // Clear minimap
+            minimapCtx.fillStyle = minimapSettings.floor;
+            minimapCtx.fillRect(0, 0, minimap.width, minimap.height);
+            
+            // Draw walls
+            minimapCtx.fillStyle = minimapSettings.wall;
+            for (let y = 0; y < mapHeight; y++) {
+                for (let x = 0; x < mapWidth; x++) {
+                    if (map[y][x] > 0) {
+                        minimapCtx.fillRect(
+                            x * cellSize * (MAP_SIZE / mapWidth), 
+                            y * cellSize * (MAP_SIZE / mapHeight), 
+                            cellSize * (MAP_SIZE / mapWidth), 
+                            cellSize * (MAP_SIZE / mapHeight)
+                        );
+                    }
+                }
+            }
+            
+            // Draw rays if enabled
+            if (minimapSettings.showRays) {
+                minimapCtx.strokeStyle = minimapSettings.ray;
+                minimapCtx.lineWidth = 1;
+                
+                // Draw fewer rays for performance (every 10th ray)
+                const rayStep = Math.max(1, Math.floor(NUM_RAYS / 20));
+                for (let x = 0; x < NUM_RAYS; x += rayStep) {
+                    const rayAngle = player.angle - HALF_FOV + (x / NUM_RAYS) * FOV;
+                    const ray = castRay(rayAngle);
+                    
+                    const playerX = (player.x / CELL_SIZE) * cellSize * (MAP_SIZE / mapWidth);
+                    const playerY = (player.y / CELL_SIZE) * cellSize * (MAP_SIZE / mapHeight);
+                    const rayEndX = playerX + ray.rayDirX * ray.distance * cellSize;
+                    const rayEndY = playerY + ray.rayDirY * ray.distance * cellSize;
+                    
+                    minimapCtx.beginPath();
+                    minimapCtx.moveTo(playerX, playerY);
+                    minimapCtx.lineTo(rayEndX, rayEndY);
+                    minimapCtx.stroke();
+                }
+            }
+            
+            // Draw player
+            const playerX = (player.x / CELL_SIZE) * cellSize * (MAP_SIZE / mapWidth);
+            const playerY = (player.y / CELL_SIZE) * cellSize * (MAP_SIZE / mapHeight);
+            const playerSize = cellSize * 0.6;
+            
+            minimapCtx.fillStyle = minimapSettings.player;
+            minimapCtx.beginPath();
+            minimapCtx.arc(playerX, playerY, playerSize/2, 0, Math.PI * 2);
+            minimapCtx.fill();
+            
+            // Draw player direction
+            minimapCtx.strokeStyle = minimapSettings.playerDir;
+            minimapCtx.lineWidth = 2;
+            minimapCtx.beginPath();
+            minimapCtx.moveTo(playerX, playerY);
+            minimapCtx.lineTo(
+                playerX + Math.cos(player.angle) * cellSize * 1.5,
+                playerY + Math.sin(player.angle) * cellSize * 1.5
+            );
+            minimapCtx.stroke();
+        }
+
+        // Rendering function
+        function render() {
+            // Clear screen
+            ctx.fillStyle = '#1D1C22'; // Floor color
+            ctx.fillRect(0, canvas.height / 2 - PLAYER_HEIGHT, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#0D0C11'; // Ceiling color
+            ctx.fillRect(0, 0, canvas.width, canvas.height / 2 - PLAYER_HEIGHT);
+            
+            // Cast rays and draw walls
+            const rays = [];
+            for (let x = 0; x < NUM_RAYS; x++) {
+                const rayAngle = player.angle - HALF_FOV + (x / NUM_RAYS) * FOV;
+                const ray = castRay(rayAngle);
+                rays.push(ray);
+                
+                // Choose wall color
+                const wallType = map[ray.mapY][ray.mapX];
+                let color = wallColors[wallType] || '#FFFFFF';
+                
+                // Apply shading based on distance and side
+                let shade = 1.0;
+                if (ray.side === 1) shade = 0.7; // Darker for NS walls
+                
+                // Darken based on distance
+                const maxDist = Math.max(map[0].length, map.length) * CELL_SIZE;
+                const distanceShade = Math.min(1.0, 0.3 + 0.7 * (1 - ray.distance / maxDist));
+                shade *= distanceShade;
+                
+                // Apply shading to color
+                const r = parseInt(color.substr(1, 2), 16) * shade;
+                const g = parseInt(color.substr(3, 2), 16) * shade;
+                const b = parseInt(color.substr(5, 2), 16) * shade;
+                const shadedColor = `rgb(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)})`;
+                
+                // Draw the wall slice
+                ctx.fillStyle = shadedColor;
+                ctx.fillRect(x * (canvas.width / NUM_RAYS), ray.start, 
+                             Math.ceil(canvas.width / NUM_RAYS), ray.end - ray.start);
+            }
+            
+            // Update debug info
+            document.getElementById('debug').innerHTML = 
+                `pos: x \| ${Math.floor(player.x)} y \| ${Math.floor(player.y)}<br>` +
+                `↻ angle: ${Math.floor(player.angle * 180 / Math.PI)}°` +
+                `<br>current <b>map size</b>: ${map[0].length}x${map.length}` +
+                `<br>dashing: ${player.isDashing ? '▶▶ yes' : '...  no'}`;
+            
+            // Draw minimap
+            drawMinimap();
+        }
+
+        // Movement controls
+        const keys = {
+            forward: false,
+            backward: false,
+            left: false,
+            right: false,
+            turnLeft: false,
+            turnRight: false,
+            strafeLeft: false,
+            strafeRight: false,
+            dash: false
+        };
+
+        // Touch controls setup
+        const forwardBtn = document.getElementById('forward');
+        const leftBtn = document.getElementById('left');
+        const rightBtn = document.getElementById('right');
+        const strafeLeftBtn = document.getElementById('strafe-left');
+        const strafeRightBtn = document.getElementById('strafe-right');
+        const dashBtn = document.getElementById('dash-btn');
+
+        // Mouse drag to look
+        canvas.addEventListener('mousedown', (e) => {
+            mouse.isDragging = true;
+            mouse.lastX = e.clientX;
+            canvas.style.cursor = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (mouse.isDragging) {
+                const deltaX = e.clientX - mouse.lastX;
+                player.angle += deltaX * mouse.sensitivity;
+                mouse.lastX = e.clientX;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            mouse.isDragging = false;
+            canvas.style.cursor = 'default';
+        });
+
+        // Touch controls for movement
+        forwardBtn.addEventListener('touchstart', () => keys.forward = true);
+        forwardBtn.addEventListener('touchend', () => keys.forward = false);
+        forwardBtn.addEventListener('mousedown', () => keys.forward = true);
+        forwardBtn.addEventListener('mouseup', () => keys.forward = false);
+        forwardBtn.addEventListener('mouseleave', () => keys.forward = false);
+
+        leftBtn.addEventListener('touchstart', () => keys.turnLeft = true);
+        leftBtn.addEventListener('touchend', () => keys.turnLeft = false);
+        leftBtn.addEventListener('mousedown', () => keys.turnLeft = true);
+        leftBtn.addEventListener('mouseup', () => keys.turnLeft = false);
+        leftBtn.addEventListener('mouseleave', () => keys.turnLeft = false);
+
+        rightBtn.addEventListener('touchstart', () => keys.turnRight = true);
+        rightBtn.addEventListener('touchend', () => keys.turnRight = false);
+        rightBtn.addEventListener('mousedown', () => keys.turnRight = true);
+        rightBtn.addEventListener('mouseup', () => keys.turnRight = false);
+        rightBtn.addEventListener('mouseleave', () => keys.turnRight = false);
+
+        strafeLeftBtn.addEventListener('touchstart', () => keys.strafeLeft = true);
+        strafeLeftBtn.addEventListener('touchend', () => keys.strafeLeft = false);
+        strafeLeftBtn.addEventListener('mousedown', () => keys.strafeLeft = true);
+        strafeLeftBtn.addEventListener('mouseup', () => keys.strafeLeft = false);
+        strafeLeftBtn.addEventListener('mouseleave', () => keys.strafeLeft = false);
+
+        strafeRightBtn.addEventListener('touchstart', () => keys.strafeRight = true);
+        strafeRightBtn.addEventListener('touchend', () => keys.strafeRight = false);
+        strafeRightBtn.addEventListener('mousedown', () => keys.strafeRight = true);
+        strafeRightBtn.addEventListener('mouseup', () => keys.strafeRight = false);
+        strafeRightBtn.addEventListener('mouseleave', () => keys.strafeRight = false);
+
+        dashBtn.addEventListener('touchstart', () => keys.dash = true);
+        dashBtn.addEventListener('touchend', () => keys.dash = false);
+        dashBtn.addEventListener('mousedown', () => keys.dash = true);
+        dashBtn.addEventListener('mouseup', () => keys.dash = false);
+        dashBtn.addEventListener('mouseleave', () => keys.dash = false);
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'w': case 'ArrowUp': keys.forward = true; break;
+                case 's': case 'ArrowDown': keys.backward = true; break;
+                case 'a': case 'ArrowLeft': keys.turnLeft = true; break;
+                case 'd': case 'ArrowRight': keys.turnRight = true; break;
+                case 'q': keys.strafeLeft = true; break;
+                case 'e': keys.strafeRight = true; break;
+                case 'Shift': keys.dash = true; break;
+                case 't': editorPanel.style.display = editorPanel.style.display === 'block' ? 'none' : 'block'; 
+                          if (editorPanel.style.display === 'block') updateSavedLevelsList();
+                          break;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            switch (e.key) {
+                case 'w': case 'ArrowUp': keys.forward = false; break;
+                case 's': case 'ArrowDown': keys.backward = false; break;
+                case 'a': case 'ArrowLeft': keys.turnLeft = false; break;
+                case 'd': case 'ArrowRight': keys.turnRight = false; break;
+                case 'q': keys.strafeLeft = false; break;
+                case 'e': keys.strafeRight = false; break;
+                case 'Shift': keys.dash = false; break;
+            }
+        });
+
+        // Dash function
+        function dash() {
+            const now = Date.now();
+            if (now - player.lastDashTime > DASH_COOLDOWN) {
+                player.isDashing = true;
+                player.lastDashTime = now;
+                
+                // End dash after duration
+                setTimeout(() => {
+                    player.isDashing = false;
+                }, DASH_DURATION);
+            }
+        }
+
+        // Movement function
+        function movePlayer(moveX, moveY) {
+            // Check collision before moving
+            const newX = player.x + moveX;
+            const newY = player.y + moveY;
+            const cellX = Math.floor(newX / CELL_SIZE);
+            const cellY = Math.floor(newY / CELL_SIZE);
+            
+            if (cellY >= 0 && cellY < map.length && 
+                cellX >= 0 && cellX < map[0].length && 
+                map[cellY][cellX] === 0) {
+                player.x = newX;
+                player.y = newY;
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            // Handle dash
+            if (keys.dash && !player.isDashing) {
+                dash();
+            }
+            
+            // Calculate current speed (dash or normal)
+            const currentSpeed = player.isDashing ? DASH_SPEED : WALK_SPEED;
+            
+            // Handle movement
+            if (keys.forward) {
+                const moveX = Math.cos(player.angle) * currentSpeed;
+                const moveY = Math.sin(player.angle) * currentSpeed;
+                movePlayer(moveX, moveY);
+            }
+            if (keys.backward) {
+                const moveX = -Math.cos(player.angle) * currentSpeed;
+                const moveY = -Math.sin(player.angle) * currentSpeed;
+                movePlayer(moveX, moveY);
+            }
+            if (keys.strafeLeft) {
+                // Strafe left (perpendicular to view angle)
+                const moveX = Math.cos(player.angle - Math.PI/2) * STRAFE_SPEED;
+                const moveY = Math.sin(player.angle - Math.PI/2) * STRAFE_SPEED;
+                movePlayer(moveX, moveY);
+            }
+            if (keys.strafeRight) {
+                // Strafe right (perpendicular to view angle)
+                const moveX = Math.cos(player.angle + Math.PI/2) * STRAFE_SPEED;
+                const moveY = Math.sin(player.angle + Math.PI/2) * STRAFE_SPEED;
+                movePlayer(moveX, moveY);
+            }
+            if (keys.turnLeft) player.angle -= ROTATION_SPEED;
+            if (keys.turnRight) player.angle += ROTATION_SPEED;
+            
+            // Render the scene
+            render();
+            
+            // Continue the loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>
